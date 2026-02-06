@@ -44,7 +44,7 @@ const HistoryItem: React.FC<HistoryItemProps> = (
         id,
         onDelete }) => {
     const [confirmDelete, setConfirmDelete] = useState<boolean>(false);
-
+    const [isHovered, setIsHovered] = useState<boolean>(false);
 
     function handleConfirm(e: React.MouseEvent) {
         e.stopPropagation();
@@ -65,23 +65,33 @@ const HistoryItem: React.FC<HistoryItemProps> = (
                 setConfirmDelete(false)
             }, 3000)
         }
-        return () => clearTimeout(timer)
+        return () => {
+            clearTimeout(timer)
+        }
     }, [confirmDelete])
 
 
 
     return (
-        <Container onClick={onClick} $isActive={isActive}>
+        <Container
+            onClick={onClick}
+            $isActive={isActive}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => {
+                setIsHovered(false);
+                setConfirmDelete(false); // 💡 体验优化：鼠标移出时，自动取消删除确认状态
+            }}
+        >
             <MessageSquare size={12} />
             <SummaryText>
                 {topic}
             </SummaryText>
 
             {
-                isActive && !confirmDelete ? <X size={12} onClick={handleConfirm} /> : null
+                (isActive || isHovered) && !confirmDelete ? <X size={12} onClick={handleConfirm} /> : null
             }
             {
-                isActive && confirmDelete ? <Trash size={12} onClick={handleDelete} /> : null
+                (isActive || isHovered) && confirmDelete ? <Trash size={12} color={'red'} onClick={handleDelete} /> : null
             }
         </Container>
     )

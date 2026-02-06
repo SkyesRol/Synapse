@@ -7,7 +7,7 @@ import { useState } from "react";
 import NewConversation from "./NewConversation";
 import HistoryItem from "./HistoryItem";
 import { useConversationStore } from "@/renderer/store/conversationStore";
-import { del } from "motion/react-client";
+
 const Container = styled.div`
     display:flex;
     flex-direction:column;
@@ -171,9 +171,7 @@ function Sidebar() {
                         </RecentConversations>
 
                     </ConversationHistory>
-                ) : (<>
-
-                </>)
+                ) : (null)
             }
             {/* <ModelSelector /> */}
         </Container>
