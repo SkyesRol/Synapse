@@ -14,10 +14,14 @@ const ItemContainer = styled.div<{ $isActive: boolean }>`
     align-items:center;
     gap:12px;
     color:${props => props.$isActive ? 'rgb(74,74,74)' : 'rgb(102,102,102)'};
-    background-color:${props => props.$isActive ? 'rgb(245, 245, 245)' : 'transparent'};
+    background-color:${props => props.$isActive ? 'rgb(230, 230, 230)' : 'transparent'};
     border-radius:12px;
     height:40px;
     padding:10px 16px;
+    &:hover{
+       cursor:pointer;
+       background-color: ${props => props.$isActive ? 'rgb(230, 230, 230)' : 'rgb(245,245,245)'};
+    }
 `
 const Label = styled.div`
     font-size:14px;

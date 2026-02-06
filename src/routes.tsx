@@ -15,6 +15,10 @@ const router = Router(
                     element: <Conversations />,
                 },
                 {
+                    path: 'conversation/:conversationId',
+                    element: <Conversations />,
+                },
+                {
                     path: 'market',
                     element: <MCPMarket />,
                 },

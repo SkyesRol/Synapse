@@ -1,4 +1,4 @@
-import { MessageCircle, Hammer, Settings, MessageSquare, Image } from "lucide-react";
+import { MessageCircle, Hammer, Settings } from "lucide-react";
 
 export const NAV_ITEMS = [
     {
@@ -22,11 +22,3 @@ export const NAV_ITEMS = [
 ]
 
 
-export const HISTORY_ITEMS = [
-    {
-        id: '',
-        topic: '',
-        icon: MessageSquare,
-        path: ''
-    }
-]
