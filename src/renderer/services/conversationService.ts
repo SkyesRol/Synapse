@@ -1,7 +1,7 @@
 import { dbPromise } from "../lib/db";
 import { Message } from "../types/conversation";
 // ---------------------  添加信息（相互对话，每条对话都为一条信息）-----------------------------
-async function addMessage(message: Message): Promise<string> {
+export async function addMessage(message: Message): Promise<string> {
     const db = await dbPromise;
     await db.put('messages', message);
     return message.id
@@ -10,16 +10,19 @@ async function addMessage(message: Message): Promise<string> {
 
 
 // ------------------------------ 获取对话所有信息 -----------------------------------------
-async function getAllMessages(conversationId: string): Promise<Message[]> {
+export async function getAllMessages(conversationId: string | undefined): Promise<Message[]> {
+    if (!conversationId) return [];
     const db = await dbPromise;
-    const res = await db.getAllFromIndex('messages', 'by-conversation', conversationId);
-    return res;
+    const range = IDBKeyRange.bound([conversationId, 0], [conversationId, Infinity]);
+    return await db.getAllFromIndex('messages', 'by-date', range);
 }
 // --------------------------------------------------------------------------------------
 
 
 // ------------------------------- 获取10条信息 ------------------------------------------
-async function getMessagesPaged(conversationId: string, limit: number = 10, lastTimestamp?: number): Promise<Message[]> {
+export async function getMessagesPaged(conversationId: string | undefined, limit: number = 10, lastTimestamp?: number): Promise<Message[]> {
+    if (!conversationId) return [];
+
     const db = await dbPromise;
     const transaction = db.transaction('messages', 'readonly');
     const index = transaction.store.index('by-date');
@@ -46,11 +49,14 @@ async function getMessagesPaged(conversationId: string, limit: number = 10, last
 
 
 // -------------------------- 删除某个对话（删除所有信息）---------------------------------
-async function deleteConversation(conversationId: string): Promise<void> {
+export async function deleteConversation(conversationId: string | undefined): Promise<string | undefined> {
+    if (!conversationId) return undefined;
     const db = await dbPromise;
     const transaction = db.transaction('messages', 'readwrite');
-    const index = transaction.store.index('by-conversation');
-    const keys = await index.getAllKeys(conversationId);
+    // 删除 'by-conversation' 索引，仅利用 'by-date' 的字段来判断删除范围
+    const index = transaction.store.index('by-date');
+    const range = IDBKeyRange.bound([conversationId, 0], [conversationId, Infinity]);
+    const keys = await index.getAllKeys(range);
 
     await Promise.all(keys.map((key => transaction.store.delete(key))));
 
@@ -59,7 +65,7 @@ async function deleteConversation(conversationId: string): Promise<void> {
 // ------------------------------------------------------------------------------------
 
 // ---------------------------- 删除某些对话信息 -----------------------------------------
-async function deleteMessages(messageIds: string[]): Promise<void> {
+export async function deleteMessages(messageIds: string[]): Promise<void> {
     const db = await dbPromise;
     const transaction = db.transaction('messages', 'readwrite');
 

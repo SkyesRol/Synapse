@@ -152,7 +152,7 @@ function Sidebar() {
                         <NewConversation onClick={handleNewTopic} />
                         <RecentConversations>
                             <ActivityLabel>
-                                RECENT ACTIVITY
+                                ASSISTANTS
                             </ActivityLabel>
                             <HistoryMenu>
                                 {
