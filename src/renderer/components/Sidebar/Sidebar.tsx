@@ -4,9 +4,8 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import NavItem from "./NavItem";
 import { SiGooglegemini } from '@icons-pack/react-simple-icons';
 import { useState } from "react";
-import NewConversation from "./NewConversation";
-import HistoryItem from "./HistoryItem";
-import { useConversationStore } from "@/renderer/store/conversationStore";
+import NewAssistant from './NewAssistant'
+import { CreateAssistantModal } from "../Modals/CreateAssistantModal";
 
 const Container = styled.div`
     display:flex;
@@ -54,13 +53,13 @@ const ConversationHistory = styled.div`
     flex-direction:column;
     gap:30px;
 `
-const RecentConversations = styled.div`
+const Assistants = styled.div`
     display:flex;
     flex-direction:column;
     gap:10px;
 `
 
-const ActivityLabel = styled.div`
+const Label = styled.div`
     display:block;
     padding: 0 16px;
     font-size:11px;
@@ -69,12 +68,11 @@ const ActivityLabel = styled.div`
     text-align:start;
     letter-spacing:0.1rem; /* 增加部分字间距 */
 `
-const HistoryMenu = styled.div`
+const AssistantsMenu = styled.div`
     display:flex;
     flex-direction:column;
     gap:5px;
 `
-
 
 function Sidebar() {
     // ----------   Navigation -----------------------
@@ -84,42 +82,10 @@ function Sidebar() {
         navigate(path);
     }
     // -----------------------------------------------
-    // ------------------ Conversations --------------
-    const showConversationList = useState<boolean>(true);
-    const { conversations, activeId, setActiveId, createConversation, deleteConversation } = useConversationStore();
-    function handleTopicActivated(id: string) {
-        setActiveId(id)
-        handleNavigate(`/conversation/${id}`)
+    const [isCreatingAssistant, setIsCreatingAssistant] = useState<boolean>(false);
+    function handleNewAssistant() {
+        setIsCreatingAssistant(true);
     }
-    function handleNewTopic() {
-        const id = createConversation()
-        setActiveId(id);
-        handleNavigate(`/conversation/${id}`)
-    }
-    function handleDelete(id: string) {
-        if (id === activeId) {
-            const currentIndex = conversations.findIndex(c => c.id === id);
-            let nextId = null;
-            if (conversations.length > 1) {
-                if (currentIndex === conversations.length - 1) {
-                    nextId = conversations[currentIndex - 1].id;
-                }
-                else {
-                    nextId = conversations[currentIndex + 1].id;
-                }
-            }
-            if (nextId) {
-                setActiveId(nextId);
-                handleNavigate(`/conversation/${nextId}`)
-            } else {
-                setActiveId(null)
-                handleNavigate('/')
-            }
-        }
-        deleteConversation(id);
-
-    }
-    // ------------------------------------------------
     return (
         <Container>
             <SideBarHeader>
@@ -146,33 +112,23 @@ function Sidebar() {
                 }
             </NavigationMenu>
             <DotLine />
-            {
-                showConversationList ? (
-                    <ConversationHistory>
-                        <NewConversation onClick={handleNewTopic} />
-                        <RecentConversations>
-                            <ActivityLabel>
-                                ASSISTANTS
-                            </ActivityLabel>
-                            <HistoryMenu>
-                                {
-                                    conversations.map((item) => (
-                                        <HistoryItem
-                                            key={item.id}
-                                            topic={item.topic}
-                                            onClick={() => { handleTopicActivated(item.id) }}
-                                            isActive={item.id === activeId}
-                                            id={item.id}
-                                            onDelete={handleDelete}
-                                        />
-                                    ))
-                                }
-                            </HistoryMenu>
-                        </RecentConversations>
 
-                    </ConversationHistory>
-                ) : (null)
-            }
+            <ConversationHistory>
+                <NewAssistant onClick={handleNewAssistant} />
+                <Assistants>
+                    <Label>
+                        ASSISTANTS
+                    </Label>
+                    <AssistantsMenu>
+
+                    </AssistantsMenu>
+                </Assistants>
+
+            </ConversationHistory>
+            <CreateAssistantModal
+                isOpen={isCreatingAssistant}
+                onClose={() => setIsCreatingAssistant(false)}
+            />
             {/* <ModelSelector /> */}
         </Container>
     )

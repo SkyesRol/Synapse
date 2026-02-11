@@ -21,18 +21,18 @@ const Text = styled.div`
     color:rgb(0,0,0);
     text-align:center;
 `
-export type NewConversation = {
+export type NewAssistantProps = {
     onClick: () => void
 }
 
 
-const NewConversation: React.FC<NewConversation> = ({ onClick }) => {
+const NewAssistant: React.FC<NewAssistantProps> = ({ onClick }) => {
 
 
     return (
         <Container onClick={onClick}>
             <Text>
-                New conversation
+                New assistant
             </Text>
             <Plus size={16} />
         </Container>
@@ -40,4 +40,4 @@ const NewConversation: React.FC<NewConversation> = ({ onClick }) => {
 
 }
 
-export default NewConversation;
+export default NewAssistant;

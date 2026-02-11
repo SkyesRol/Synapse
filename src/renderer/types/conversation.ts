@@ -1,4 +1,4 @@
-import { Blob } from "buffer";
+
 
 export type Role = 'system' | 'user' | 'assistant' | 'tool';
 
@@ -7,6 +7,7 @@ export interface ConversationMetadata {
     topic: string;
     createdAt: number;
     updatedAt: number;
+    assistantId: string;
 }
 // --------------------------  Message Content ---------------------------
 export interface Message {
@@ -31,7 +32,8 @@ export type TextContent = {
 export type ImageContent = {
     type: 'image';
     mimeType: string;
-    data: string | Blob;
+    // Base64 string or URL
+    data: string;
 }
 export type ToolCallContent = {
     type: 'tool_call';

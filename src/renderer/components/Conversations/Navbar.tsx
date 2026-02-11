@@ -1,11 +1,13 @@
-import { History, Ellipsis } from "lucide-react"
+import { History, Ellipsis, Plus } from "lucide-react"
+import { useNavigate } from "react-router-dom";
 import HistoryMenu from "./HistoryMenu";
 import styled from "styled-components"
-import { useConversationStore } from '@/renderer/store/conversationStore';
+import { useConversationStore } from '@/renderer/store/useConversationStore';
 import { useState, useRef } from "react";
 import useClickOutside from "@/renderer/hooks/useClickOutside";
 export type NavbarProps = {
     conversationId: string | undefined,
+    assistantId: string | undefined,
     modelName: string,
 }
 
@@ -49,14 +51,26 @@ const IconWrapper = styled.div`
     align-items:center;
     gap:12px;
 `
-const Navbar: React.FC<NavbarProps> = ({ conversationId, modelName }) => {
-    const conversations = useConversationStore((state) => state.conversations);
+const Navbar: React.FC<NavbarProps> = ({ conversationId, assistantId, modelName }) => {
+    const navigate = useNavigate();
+    const { conversations, createConversation, setActiveId } = useConversationStore();
     const currentConversation = conversations.find(conv => conv.id === conversationId);
     const topic = currentConversation?.topic || 'New Chat'
     const [isShowHistory, setIsShowHistory] = useState<boolean>(false);
     const containerRef = useRef<HTMLDivElement>(null);
 
     useClickOutside(containerRef, () => { setIsShowHistory(false) })
+
+    function handleNewTopic() {
+        if (assistantId) {
+            const id = createConversation(assistantId)
+            setActiveId(id);
+            navigate(`/conversation/${id}`)
+        } else {
+
+            console.warn("Cannot create new topic: Assistant ID is missing");
+        }
+    }
 
     return (
         <Container>
@@ -69,6 +83,7 @@ const Navbar: React.FC<NavbarProps> = ({ conversationId, modelName }) => {
                 </ModelName>
             </Topic_ModelName>
             <IconWrapper ref={containerRef}>
+                <Plus size={18} onClick={handleNewTopic} style={{ cursor: 'pointer' }} />
                 <History size={18} onClick={() => { setIsShowHistory(!isShowHistory) }}
                     style={{ cursor: 'pointer' }} />
                 {

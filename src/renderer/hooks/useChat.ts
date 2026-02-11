@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Message } from '../types/conversation'
 import { addMessage, getAllMessages } from '../services/conversationService'
-import { useConversationStore } from '../store/conversationStore'
+import { useConversationStore } from '../store/useConversationStore'
 import { useNavigate } from 'react-router-dom'
 
 interface UseChatReturn {

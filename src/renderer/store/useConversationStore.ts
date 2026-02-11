@@ -8,7 +8,7 @@ interface ConversationState {
     activeId: string | null;
 
 
-    createConversation: (topic?: string) => string;
+    createConversation: (assistantId: string, topic?: string) => string;
     deleteConversation: (id: string) => void;
     setActiveId: (id: string | null) => void;
 }
@@ -23,10 +23,12 @@ export const useConversationStore =
                 conversations: [],
                 activeId: null,
 
-                createConversation: (topic = 'New Chat') => {
+                createConversation: (assistantId: string, topic = 'New Chat') => {
                     const newId = crypto.randomUUID();
+
                     const newChat: ConversationMetadata = {
                         id: newId,
+                        assistantId,
                         topic: topic,
                         createdAt: Date.now(),
                         updatedAt: Date.now(),

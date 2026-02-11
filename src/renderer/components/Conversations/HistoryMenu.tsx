@@ -1,8 +1,8 @@
 import styled from "styled-components"
 import { useState } from "react"
-import { useConversationStore } from "@/renderer/store/conversationStore"
+import { useConversationStore } from "@/renderer/store/useConversationStore"
 import { useNavigate } from "react-router-dom"
-import HistoryItem from "../Sidebar/HistoryItem"
+import HistoryItem from "./HistoryItem"
 
 
 const Container = styled.div`

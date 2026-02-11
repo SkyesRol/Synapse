@@ -44,8 +44,9 @@ width:100%;
 `
 function Conversations() {
     let params = useParams();
-    let id = params.conversationId;
-    const { messages, loading, sendMessage } = useChat(id);
+    let conversationId = params.conversationId;
+    let assistantId = params.assistantId;
+    const { messages, loading, sendMessage } = useChat(conversationId);
     let [prompt, setPrompt] = useState<string>('');
     function handleValueChange(value: string) {
         setPrompt(value);
@@ -56,12 +57,12 @@ function Conversations() {
     }
     return (
         <Container>
-            <Navbar conversationId={id} modelName="Claude Opus 4.6" />
+            <Navbar assistantId={assistantId} conversationId={conversationId} modelName="Claude Opus 4.6" />
             <ChatContent>
                 {
                     loading ? <div> Loading~ </div> : <div> Not Loading~ </div>
                 }
-                Conversations Page:{id}
+                Conversations Page:{conversationId}
                 <MessageList>
                     {
                         messages.map(message => (

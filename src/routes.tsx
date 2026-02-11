@@ -3,7 +3,7 @@ import App from './renderer/App'
 import Conversations from "./renderer/pages/Conversation/Conversations";
 import MCPMarket from "./renderer/pages/Market/MCPMarket";
 import Settings from "./renderer/pages/Settings/Settings";
-
+import { Chat } from "./renderer/pages/Chat/Chat";
 const router = Router(
     [
         {
@@ -12,11 +12,15 @@ const router = Router(
             children: [
                 {
                     index: true,
-                    element: <Conversations />,
+                    element: <Chat />,
                 },
                 {
                     path: 'conversation/:conversationId',
                     element: <Conversations />,
+                },
+                {
+                    path: 'assistant/:assistantId',
+                    element: <Conversations />
                 },
                 {
                     path: 'market',
