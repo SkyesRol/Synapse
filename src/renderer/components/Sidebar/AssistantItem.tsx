@@ -1,3 +1,4 @@
+// Delete Assistant
 import AssistantAvatar from '@/assets/AssistantAvatar'
 import { Settings2 } from 'lucide-react';
 import { useState } from 'react';

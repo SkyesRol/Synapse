@@ -36,7 +36,7 @@ const Overlay = styled(motion.div)`
 const Content = styled(motion.div) <ModalStyleProps>`
     width: ${props => props.$width || '420px'};
     height: ${props => props.$height || 'auto'};
-    max-height: 90vh;
+    max-height: 70vh;
     display:flex;
     flex-direction:column;
     background-color:rgb(255,255,255);
@@ -56,7 +56,7 @@ const Header = styled.div`
 
 const Title = styled.div`
     font-size:18px;
-    font-weight:700;
+    font-weight:600;
     line-height:28px;
     color:rgb(26,26,26);
 `
