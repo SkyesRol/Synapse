@@ -1,13 +1,16 @@
 import { ModelConfig } from "./models";
 
 
-export interface Assistant {
+export interface AssistantMetadata {
     assistantId: string,
     name: string,
     icon: string,
+    createdAt: number,
+    updatedAt: number,
+}
+
+export interface Assistant extends AssistantMetadata {
     systemPrompt: string,
     modelConfig: ModelConfig,
-    createdAt: number;
-    updatedAt: number;
-    metadata?: Record<string, any>;
+    metadata?: Record<string, any>,
 }
