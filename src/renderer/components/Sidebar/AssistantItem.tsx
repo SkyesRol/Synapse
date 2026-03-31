@@ -9,15 +9,16 @@ interface AssistantItemProps {
     id: string;
     name: string;
     avatarId: string;
+    isActive: boolean;
 }
 
 
-const Container = styled.div`
+const Container = styled.div<{ $isActive: boolean }>`
     display:flex;
     align-items:center;
     gap:12px;
     padding:10px 16px;
-    background:rgb(245,245,245);
+    background:${props => props.$isActive ? 'rgb(240, 240, 240)' : 'transparent'};
     border-radius:12px;
 `
 const Name = styled.div`
@@ -39,11 +40,11 @@ const IconWrapper = styled.div`
     }
 `
 
-export const AssistantItem: React.FC<AssistantItemProps> = ({ id, name, avatarId }) => {
+export const AssistantItem: React.FC<AssistantItemProps> = ({ id, name, avatarId, isActive }) => {
     const [isShowSettings, setIsShowSettings] = useState<boolean>(false);
 
     return (
-        <Container>
+        <Container $isActive={isActive}>
             <AssistantAvatar id={avatarId} size={32} />
             <Name>
                 {name}

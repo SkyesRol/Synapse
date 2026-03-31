@@ -19,17 +19,17 @@ import {
 // Type Definitions
 // -----------------------------------------------------------------------------
 
-export type AvatarId = 
-  | 'general' 
-  | 'coding' 
-  | 'creative' 
-  | 'data' 
-  | 'language' 
-  | 'academic' 
-  | 'design' 
-  | 'product' 
-  | 'marketing' 
-  | 'life' 
+export type AvatarId =
+  | 'general'
+  | 'coding'
+  | 'creative'
+  | 'data'
+  | 'language'
+  | 'academic'
+  | 'design'
+  | 'product'
+  | 'marketing'
+  | 'life'
   | 'debate';
 
 interface AvatarConfigItem {
@@ -142,7 +142,9 @@ const AssistantAvatar: React.FC<AssistantAvatarProps> = ({ id, size = '32px', cl
   }
 
   const { icon: IconComponent, bg, color } = config;
-
+  if (typeof size === 'number') {
+    size = `${size}px`
+  }
   // STRATEGY:
   // Instead of complex SVG nesting, we'll create a simple SVG where:
   // 1. <rect> is the background

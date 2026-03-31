@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import styled from 'styled-components';
 import { GlobalModal } from './GlobalModal';
 import { AvatarSelector } from '@/assets/AssistantAvatar';
-
+import { useAssistantStore } from '@/renderer/store/useAssistantStore'
 interface CreateAssistantModalProps {
     isOpen: boolean;
     onClose: () => void;
@@ -72,21 +72,40 @@ const CreateButton = styled.button`
     background-color:rgb(26,26,26);
     border-radius:8px;
     cursor:pointer;
+    &:disabled {
+        background-color:rgb(101, 101, 101);
+        cursor:defalut;
+    }
+
 `
 
 export const CreateAssistantModal: React.FC<CreateAssistantModalProps> = ({ isOpen, onClose }) => {
     const [selectedIcon, setSelectedIcon] = useState('coding');
-
+    const [name, setName] = useState('');
+    const { createAssistant } = useAssistantStore();
+    const isValid = name.trim().length > 0;
     const footerContent = (
         <>
             <CancelButton onClick={onClose}>
                 Cancel
             </CancelButton>
-            <CreateButton>
+            <CreateButton onClick={() => handleCreateAssistant()} disabled={!isValid}>
                 Create Assistant
             </CreateButton>
         </>
     );
+
+    const handleCreateAssistant = async (): Promise<void> => {
+        try {
+            await createAssistant({ name, icon: selectedIcon });
+            setName('');
+            setSelectedIcon('coding');
+            onClose();
+        }
+        catch (error) {
+            console.log(error)
+        }
+    }
 
     return (
         <GlobalModal
@@ -110,8 +129,11 @@ export const CreateAssistantModal: React.FC<CreateAssistantModalProps> = ({ isOp
                     <Text>
                         Name
                     </Text>
-                    <NameInput placeholder="e.g., Minions-Bob" />
-
+                    <NameInput
+                        placeholder="e.g., Minions-Bob"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                    />
                 </NameInputSection>
             </BodyContainer>
         </GlobalModal>

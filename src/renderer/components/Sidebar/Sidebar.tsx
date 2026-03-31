@@ -4,9 +4,12 @@ import styled from "styled-components";
 import { useLocation, useNavigate } from 'react-router-dom'
 import NavItem from "./NavItem";
 import { SiGooglegemini } from '@icons-pack/react-simple-icons';
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import NewAssistant from './NewAssistant'
 import { CreateAssistantModal } from "../Modals/CreateAssistantModal";
+import { AssistantMetadata } from "@/renderer/types/assistant";
+import { useAssistantStore } from "@/renderer/store/useAssistantStore";
+import { AssistantItem } from "./AssistantItem";
 
 const Container = styled.div`
     display:flex;
@@ -87,6 +90,9 @@ function Sidebar() {
     function handleNewAssistant() {
         setIsCreatingAssistant(true);
     }
+    const { assistants, activeAssistantId } = useAssistantStore();
+
+
     return (
         <Container>
             <SideBarHeader>
@@ -121,7 +127,17 @@ function Sidebar() {
                         ASSISTANTS
                     </Label>
                     <AssistantsMenu>
-
+                        {
+                            assistants.map((assistant) => (
+                                <AssistantItem
+                                    key={assistant.assistantId}
+                                    id={assistant.assistantId}
+                                    name={assistant.name}
+                                    avatarId={assistant.icon}
+                                    isActive={assistant.assistantId === activeAssistantId ? true : false}
+                                />
+                            ))
+                        }
                     </AssistantsMenu>
                 </Assistants>
 
