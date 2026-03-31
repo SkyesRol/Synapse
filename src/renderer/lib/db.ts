@@ -6,7 +6,6 @@ interface SynapseDB extends DBSchema {
         key: string;
         value: Message;
         indexes: {
-            'by-conversation': string,
             'by-date': ['conversationId', 'timestamp']
         };
     },

@@ -1,6 +1,7 @@
 import styled from "styled-components"
 import { useState } from "react"
 import { useConversationStore } from "@/renderer/store/useConversationStore"
+import { useAssistantStore } from "@/renderer/store/useAssistantStore"
 import { useNavigate } from "react-router-dom"
 import HistoryItem from "./HistoryItem"
 
@@ -57,20 +58,25 @@ export default function HistoryMenu() {
     // ------------------ Conversations --------------
     const showConversationList = useState<boolean>(true);
     const { conversations, activeId, setActiveId, deleteConversation } = useConversationStore();
+    const { activeAssistantId } = useAssistantStore();
+    // 只显示当前 Assistant 的对话
+    const filteredConversations = activeAssistantId
+        ? conversations.filter(c => c.assistantId === activeAssistantId)
+        : conversations;
     function handleTopicActivated(id: string) {
         setActiveId(id)
         handleNavigate(`/conversation/${id}`)
     }
     function handleDelete(id: string) {
         if (id === activeId) {
-            const currentIndex = conversations.findIndex(c => c.id === id);
+            const currentIndex = filteredConversations.findIndex(c => c.id === id);
             let nextId = null;
-            if (conversations.length > 1) {
-                if (currentIndex === conversations.length - 1) {
-                    nextId = conversations[currentIndex - 1].id;
+            if (filteredConversations.length > 1) {
+                if (currentIndex === filteredConversations.length - 1) {
+                    nextId = filteredConversations[currentIndex - 1].id;
                 }
                 else {
-                    nextId = conversations[currentIndex + 1].id;
+                    nextId = filteredConversations[currentIndex + 1].id;
                 }
             }
             if (nextId) {
@@ -97,7 +103,7 @@ export default function HistoryMenu() {
                 </SearchBar> */}
                 <HistorySection>
                     {showConversationList ?
-                        conversations.map((item) => (
+                        filteredConversations.map((item) => (
                             <HistoryItem
                                 key={item.id}
                                 topic={item.topic}

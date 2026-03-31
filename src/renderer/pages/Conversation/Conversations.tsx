@@ -3,6 +3,8 @@ import useChat from "@/renderer/hooks/useChat";
 import { useState } from "react";
 import styled from 'styled-components';
 import Navbar from "@/renderer/components/Conversations/Navbar";
+import { useConversationStore } from "@/renderer/store/useConversationStore";
+import { useAssistantStore } from "@/renderer/store/useAssistantStore";
 export const Container = styled.div`
   display: flex;
   flex-direction: column;
@@ -45,8 +47,13 @@ width:100%;
 function Conversations() {
     let params = useParams();
     let conversationId = params.conversationId;
-    let assistantId = params.assistantId;
-    const { messages, loading, sendMessage } = useChat(conversationId);
+    const { conversations } = useConversationStore();
+    const { activeAssistantId } = useAssistantStore();
+    // 从 conversation 元数据反查，fallback 到 store 中的 activeAssistantId
+    const assistantId = conversations.find(c => c.id === conversationId)?.assistantId
+        ?? activeAssistantId
+        ?? undefined;
+    const { messages, loading, sendMessage } = useChat(conversationId, assistantId);
     let [prompt, setPrompt] = useState<string>('');
     function handleValueChange(value: string) {
         setPrompt(value);
@@ -57,7 +64,7 @@ function Conversations() {
     }
     return (
         <Container>
-            <Navbar assistantId={assistantId} conversationId={conversationId} modelName="Claude Opus 4.6" />
+            <Navbar conversationId={conversationId} modelName="Claude Opus 4.6" />
             <ChatContent>
                 {
                     loading ? <div> Loading~ </div> : <div> Not Loading~ </div>

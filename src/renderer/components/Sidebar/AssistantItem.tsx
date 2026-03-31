@@ -4,6 +4,9 @@ import { Settings2 } from 'lucide-react';
 import { useState } from 'react';
 import styled from 'styled-components';
 import { AssistantSettingsModal } from '../Modals/AssistantSettingsModal';
+import { useNavigate } from 'react-router-dom';
+import { useAssistantStore } from '@/renderer/store/useAssistantStore';
+import { useConversationStore } from '@/renderer/store/useConversationStore';
 
 interface AssistantItemProps {
     id: string;
@@ -20,6 +23,7 @@ const Container = styled.div<{ $isActive: boolean }>`
     padding:10px 16px;
     background:${props => props.$isActive ? 'rgb(240, 240, 240)' : 'transparent'};
     border-radius:12px;
+    cursor:pointer;
 `
 const Name = styled.div`
     font-size:14px;
@@ -42,9 +46,27 @@ const IconWrapper = styled.div`
 
 export const AssistantItem: React.FC<AssistantItemProps> = ({ id, name, avatarId, isActive }) => {
     const [isShowSettings, setIsShowSettings] = useState<boolean>(false);
+    const navigate = useNavigate();
+    const { setActiveAssistantId } = useAssistantStore();
+    const { conversations, setActiveId } = useConversationStore();
+
+    function handleClick() {
+        setActiveAssistantId(id);
+        // 找到该 Assistant 最近的一次对话
+        const latestConv = conversations
+            .filter(c => c.assistantId === id)
+            .sort((a, b) => b.updatedAt - a.updatedAt)[0];
+        if (latestConv) {
+            setActiveId(latestConv.id);
+            navigate(`/conversation/${latestConv.id}`);
+        } else {
+            setActiveId(null);
+            navigate('/');
+        }
+    }
 
     return (
-        <Container $isActive={isActive}>
+        <Container $isActive={isActive} onClick={handleClick}>
             <AssistantAvatar id={avatarId} size={32} />
             <Name>
                 {name}

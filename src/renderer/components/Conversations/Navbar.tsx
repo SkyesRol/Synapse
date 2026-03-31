@@ -3,11 +3,11 @@ import { useNavigate } from "react-router-dom";
 import HistoryMenu from "./HistoryMenu";
 import styled from "styled-components"
 import { useConversationStore } from '@/renderer/store/useConversationStore';
+import { useAssistantStore } from '@/renderer/store/useAssistantStore';
 import { useState, useRef } from "react";
 import useClickOutside from "@/renderer/hooks/useClickOutside";
 export type NavbarProps = {
     conversationId: string | undefined,
-    assistantId: string | undefined,
     modelName: string,
 }
 
@@ -51,10 +51,12 @@ const IconWrapper = styled.div`
     align-items:center;
     gap:12px;
 `
-const Navbar: React.FC<NavbarProps> = ({ conversationId, assistantId, modelName }) => {
+const Navbar: React.FC<NavbarProps> = ({ conversationId, modelName }) => {
     const navigate = useNavigate();
     const { conversations, createConversation, setActiveId } = useConversationStore();
+    const { activeAssistantId } = useAssistantStore();
     const currentConversation = conversations.find(conv => conv.id === conversationId);
+    const assistantId = currentConversation?.assistantId ?? activeAssistantId;
     const topic = currentConversation?.topic || 'New Chat'
     const [isShowHistory, setIsShowHistory] = useState<boolean>(false);
     const containerRef = useRef<HTMLDivElement>(null);
