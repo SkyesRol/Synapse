@@ -6,7 +6,8 @@ interface SynapseDB extends DBSchema {
         key: string;
         value: Message;
         indexes: {
-            'by-date': ['conversationId', 'timestamp']
+            'by-date': ['conversationId', 'timestamp'];
+            'by-conversation': string;
         };
     },
     assistants: {
@@ -16,7 +17,7 @@ interface SynapseDB extends DBSchema {
 }
 
 const DB_NAME = 'synapse-db';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 export const dbPromise = openDB<SynapseDB>(DB_NAME, DB_VERSION, {
     upgrade: (db, oldVersion, newVersion, transaction) => {
@@ -26,6 +27,10 @@ export const dbPromise = openDB<SynapseDB>(DB_NAME, DB_VERSION, {
         }
         if (oldVersion < 2) {
             db.createObjectStore('assistants', { keyPath: 'assistantId' });
+        }
+        if (oldVersion < 3) {
+            const messageStore = transaction.objectStore('messages');
+            messageStore.createIndex('by-conversation', 'conversationId');
         }
     },
 })

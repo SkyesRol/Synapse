@@ -1,5 +1,5 @@
 // Update Assistant
-import React from 'react';
+import React, { useEffect } from 'react';
 import styled from 'styled-components';
 import { GlobalModal } from './GlobalModal';
 import AssistantAvatar from '@/assets/AssistantAvatar';
@@ -7,6 +7,9 @@ import { useState, useRef } from 'react';
 import { Box } from 'lucide-react';
 import { SliderTrack } from '../SliderTrack';
 import { StreamResponse } from '../StreamResponse';
+import { Assistant } from '@/renderer/types/assistant';
+import { getAssistant } from '@/renderer/services/assistantService';
+import { useAssistantStore } from '@/renderer/store/useAssistantStore'
 interface AssistantSettingsModalProps {
     isOpen: boolean;
     onClose: () => void;
@@ -52,7 +55,6 @@ const BodyContainer = styled.div`
     display:flex;
     flex-direction:column;
     gap:10px;
-    padding:24px;
 `
 const ModelSelection = styled.div`
     display:flex;
@@ -66,19 +68,42 @@ const Label = styled.div`
     line-height:20px;
     color:rgba(26,26,26,1)
 `
-const ModelSelectionInput = styled.input`
-    display:inline-block;
+
+
+const ModelSelectionArea = styled.div`
+    position:relative;
+
+`
+
+
+
+const ModelSelectionInput = styled.div`
+    display:flex;
     flex-direction:row;
     align-items:center;
     padding: 0 12px 0 40px;
+    width:100%;
+    height:40px;
     font-size:14px;
     font-weight:400;
     line-height:20px;
     color:rgba(74,74,74,1);
-    background-color:rgb(255,255,255)
+    background-color:#f5f5f5;
     border:1px solid rgba(225, 225, 225, 1);
     border-radius:8px;
+    cursor:default;
 `
+const IconWrapper = styled.div`
+    position:absolute;
+    left:12px;
+    top:50%;
+    transform:translateY(-50%);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+`
+
+
 const TemperatureAdjustment = styled.div`
     display:flex;
     gap:10px;
@@ -121,19 +146,62 @@ const SystemPrompt = styled.div`
     flex-direction:column;
 `
 const InputArea = styled.textarea`
-    display:inline-block;
-    width:430px;
-    height:120px;
+    display:block;
+    width:100%;
+    height:255px;
     padding:10px 12px;
     font-family:Inter,sans-serif;
     font-size:14px;
     font-weight:400;
-    line-height:20;
+    line-height:20px;
     color:rgb(74,74,74);
     border-radius:12px;
     border:0.66px solid rgb(74,74,74);
+    resize:none;
+    &::-webkit-scrollbar {
+        width:6px;
+    }
+    &::-webkit-scrollbar-track { 
+        background:transparent;
+        margin:8px 2px;
+    }
+    &::-webkit-scrollbar-thumb {
+        background-color:transparent;
+        transition: background-color 0.3s ease;
+
+    }
+    &:hover::-webkit-scrollbar-thumb {
+        background-color:#d1d1d1;
+        border-radius:16px;
+
+    }
 `
 export const AssistantSettingsModal: React.FC<AssistantSettingsModalProps> = ({ isOpen, onClose, avatarId, name, id }) => {
+    const [assistant, setAssistant] = useState<Assistant>();
+    const [loading, setIsLoading] = useState<boolean>(false);
+    const [error, setError] = useState<any>(null);
+    useEffect(() => {
+        const fetchData = async () => {
+
+            try {
+                setIsLoading(true);
+                setError(null);
+                const data = await getAssistant(id);
+                setAssistant(data);
+                setTemperature(data.modelConfig.temperature);
+                setTokenCounts(data.modelConfig.maxTokens);
+                setTop_P(data.modelConfig.topP);
+                setIsStream(data.modelConfig.stream);
+                setPrompt(data.systemPrompt);
+                setIsLoading(false);
+            } catch (error) {
+                setError(error);
+                console.log(error);
+                setIsLoading(false);
+            }
+        }
+        fetchData();
+    }, [])
 
     const assistantHeader = (
         <AvatarContainer>
@@ -149,8 +217,8 @@ export const AssistantSettingsModal: React.FC<AssistantSettingsModalProps> = ({ 
             <CancelButton onClick={onClose}>
                 Cancel
             </CancelButton>
-            <CreateButton>
-                Create Assistant
+            <CreateButton onClick={handleUpdate}>
+                Update Assistant
             </CreateButton>
         </>
     );
@@ -161,8 +229,22 @@ export const AssistantSettingsModal: React.FC<AssistantSettingsModalProps> = ({ 
     const [top_P, setTop_P] = useState<number>(1);
     const [prompt, setPrompt] = useState<string>();
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const { updateAssistant } = useAssistantStore();
     function handleStream() {
         return isStream ? setIsStream(false) : setIsStream(true)
+    }
+    async function handleUpdate() {
+        await updateAssistant(id, {
+            systemPrompt: prompt,
+            modelConfig: {
+                ...assistant!.modelConfig,
+                temperature,
+                maxTokens: tokenCounts,
+                topP: top_P,
+                stream: isStream,
+            }
+        })
+        onClose();
     }
     return (
         <GlobalModal
@@ -170,8 +252,8 @@ export const AssistantSettingsModal: React.FC<AssistantSettingsModalProps> = ({ 
             onClose={onClose}
             title={assistantHeader}
             footer={footerContent}
-            width='480px'
-            height='632px'
+            width='580px'
+            height='auto'
         >
             <BodyContainer>
 
@@ -179,9 +261,14 @@ export const AssistantSettingsModal: React.FC<AssistantSettingsModalProps> = ({ 
                     <Label>
                         Model
                     </Label>
-                    <ModelSelectionInput>
-                        <Box size={16} />
-                    </ModelSelectionInput>
+                    <ModelSelectionArea>
+                        <ModelSelectionInput>
+                            {assistant?.modelConfig.modelName}
+                        </ModelSelectionInput>
+                        <IconWrapper>
+                            <Box size={16} />
+                        </IconWrapper>
+                    </ModelSelectionArea>
                 </ModelSelection>
                 <TemperatureAdjustment>
                     <DetailInfos>

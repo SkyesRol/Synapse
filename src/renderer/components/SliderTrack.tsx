@@ -1,6 +1,6 @@
 import styled from "styled-components"
 import { useRef } from "react";
-
+import { ValueFix } from "@/shared/utils";
 interface SliderProps {
     min?: number;
     max?: number;
@@ -74,7 +74,7 @@ export const SliderTrack: React.FC<SliderProps> = ({
         const percentage = offsetX / width;
         let rawValue = min + (max - min) * percentage;
         let steppedValue = Math.round(rawValue / step) * step;
-
+        steppedValue = ValueFix(steppedValue, step);
         // 7. 再次确保不越界 (因为 step 计算可能会导致微小的越界)
         steppedValue = Math.max(min, Math.min(max, steppedValue));
 
@@ -82,7 +82,6 @@ export const SliderTrack: React.FC<SliderProps> = ({
         // 注意：这里直接调用 onChange，由父组件控制状态
         onChange(steppedValue);
     }
-
 
 
     const handleMouseDown = (e: React.MouseEvent | React.TouchEvent) => {

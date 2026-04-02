@@ -36,7 +36,7 @@ const Overlay = styled(motion.div)`
 const Content = styled(motion.div) <ModalStyleProps>`
     width: ${props => props.$width || '420px'};
     height: ${props => props.$height || 'auto'};
-    max-height: 70vh;
+    max-height: 90vh;
     display:flex;
     flex-direction:column;
     background-color:rgb(255,255,255);
