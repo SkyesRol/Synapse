@@ -1,0 +1,1370 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SSE Parser 可视化</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+            background: #0a0e17;
+            color: #e0e6f0;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .header {
+            text-align: center;
+            padding: 24px 20px 12px;
+        }
+
+        .header h1 {
+            font-size: 22px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #60a5fa, #a78bfa, #f472b6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 6px;
+        }
+
+        .header p {
+            font-size: 13px;
+            color: #64748b;
+        }
+
+        .main-container {
+            display: flex;
+            gap: 16px;
+            padding: 16px 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+            min-height: 420px;
+        }
+
+        .panel {
+            background: #111827;
+            border: 1px solid #1e293b;
+            border-radius: 12px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-header {
+            padding: 12px 16px;
+            border-bottom: 1px solid #1e293b;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+
+        .panel-header .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .panel-body {
+            padding: 12px;
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        /* Network Panel */
+        .network-panel {
+            flex: 0 0 260px;
+        }
+
+        .network-panel .dot {
+            background: #f59e0b;
+        }
+
+        .chunk-item {
+            background: #1a1f2e;
+            border: 1px solid #2d3548;
+            border-radius: 8px;
+            padding: 10px 12px;
+            font-size: 11px;
+            line-height: 1.6;
+            word-break: break-all;
+            position: relative;
+            transition: opacity 0.3s;
+        }
+
+        .chunk-item.sent {
+            opacity: 0.25;
+            border-color: #1e293b;
+        }
+
+        .chunk-item .chunk-label {
+            font-size: 10px;
+            color: #f59e0b;
+            font-weight: 600;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .chunk-item .chunk-content {
+            color: #fbbf24;
+            white-space: pre-wrap;
+        }
+
+        /* Buffer Panel */
+        .buffer-panel {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .buffer-panel .dot {
+            background: #3b82f6;
+        }
+
+        .buffer-display {
+            background: #0d1117;
+            border: 1px solid #1e293b;
+            border-radius: 8px;
+            padding: 14px;
+            font-size: 12px;
+            line-height: 1.8;
+            min-height: 100px;
+            word-break: break-all;
+            white-space: pre-wrap;
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .buffer-display .buffer-text {
+            position: relative;
+            z-index: 1;
+        }
+
+        .buffer-char {
+            display: inline;
+            position: relative;
+        }
+
+        .buffer-char.highlight-boundary {
+            background: #ef444480;
+            color: #fca5a5;
+            border-radius: 2px;
+            padding: 0 1px;
+            animation: pulse-boundary 1s ease-in-out infinite;
+        }
+
+        .buffer-char.highlight-event {
+            background: #22c55e30;
+            color: #86efac;
+            border-radius: 2px;
+        }
+
+        .buffer-char.new-chunk {
+            color: #60a5fa;
+        }
+
+        @keyframes pulse-boundary {
+            0%, 100% { background: #ef444480; }
+            50% { background: #ef4444c0; }
+        }
+
+        .buffer-empty {
+            color: #374151;
+            font-style: italic;
+        }
+
+        /* Raw Event Panel */
+        .raw-event-panel {
+            flex: 0 0 240px;
+        }
+
+        .raw-event-panel .dot {
+            background: #8b5cf6;
+        }
+
+        .raw-event-display {
+            background: #0d1117;
+            border: 1px solid #1e293b;
+            border-radius: 8px;
+            padding: 14px;
+            font-size: 11px;
+            line-height: 1.7;
+            white-space: pre-wrap;
+            word-break: break-all;
+            min-height: 80px;
+        }
+
+        .raw-line {
+            display: block;
+            padding: 2px 4px;
+            border-radius: 3px;
+            margin: 1px 0;
+        }
+
+        .raw-line.field-data { color: #34d399; }
+        .raw-line.field-event { color: #a78bfa; }
+        .raw-line.field-id { color: #60a5fa; }
+        .raw-line.field-retry { color: #fb923c; }
+        .raw-line.field-comment { color: #4b5563; font-style: italic; }
+
+        /* Output Panel */
+        .output-panel {
+            flex: 0 0 260px;
+        }
+
+        .output-panel .dot {
+            background: #10b981;
+        }
+
+        .frame-item {
+            background: #0d1117;
+            border: 1px solid #1e293b;
+            border-radius: 8px;
+            padding: 10px 12px;
+            font-size: 11px;
+            line-height: 1.6;
+            opacity: 0;
+        }
+
+        .frame-item .frame-label {
+            font-size: 10px;
+            color: #10b981;
+            font-weight: 600;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .frame-field {
+            display: flex;
+            gap: 6px;
+            padding: 2px 0;
+        }
+
+        .frame-field .field-name {
+            color: #64748b;
+            flex-shrink: 0;
+            min-width: 44px;
+        }
+
+        .frame-field .field-value {
+            color: #e2e8f0;
+            word-break: break-all;
+        }
+
+        .frame-field .field-value.val-data { color: #34d399; }
+        .frame-field .field-value.val-event { color: #a78bfa; }
+        .frame-field .field-value.val-id { color: #60a5fa; }
+
+        /* Pipeline */
+        .pipeline-section {
+            padding: 0 20px 16px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .pipeline {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            background: #111827;
+            border: 1px solid #1e293b;
+            border-radius: 12px;
+            padding: 14px 20px;
+        }
+
+        .pipe-stage {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 500;
+            background: #1a1f2e;
+            border: 1px solid #2d3548;
+            white-space: nowrap;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .pipe-stage.active {
+            border-color: #3b82f6;
+            background: #1e3a5f;
+            box-shadow: 0 0 20px #3b82f640;
+        }
+
+        .pipe-stage.completed {
+            border-color: #10b981;
+            background: #0d2a22;
+        }
+
+        .pipe-stage .stage-icon {
+            font-size: 16px;
+        }
+
+        .pipe-arrow {
+            color: #334155;
+            font-size: 18px;
+            padding: 0 8px;
+            flex-shrink: 0;
+        }
+
+        .pipe-arrow.active {
+            color: #3b82f6;
+        }
+
+        /* Controls */
+        .controls-section {
+            padding: 0 20px 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .controls-bar {
+            background: #111827;
+            border: 1px solid #1e293b;
+            border-radius: 12px;
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: 1px solid;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .btn-next {
+            background: #1d4ed8;
+            border-color: #2563eb;
+            color: #e0e6f0;
+        }
+
+        .btn-next:not(:disabled):hover {
+            background: #2563eb;
+            box-shadow: 0 0 20px #2563eb60;
+        }
+
+        .btn-reset {
+            background: #1a1f2e;
+            border-color: #374151;
+            color: #94a3b8;
+        }
+
+        .btn-reset:not(:disabled):hover {
+            background: #2d3548;
+            border-color: #475569;
+        }
+
+        .btn-auto {
+            background: #065f46;
+            border-color: #059669;
+            color: #d1fae5;
+        }
+
+        .btn-auto:not(:disabled):hover {
+            background: #047857;
+            box-shadow: 0 0 20px #05966960;
+        }
+
+        .btn-auto.running {
+            background: #7f1d1d;
+            border-color: #dc2626;
+            color: #fecaca;
+        }
+
+        .status-text {
+            margin-left: auto;
+            font-size: 13px;
+            color: #94a3b8;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #374151;
+            transition: background 0.3s;
+        }
+
+        .status-indicator.reading { background: #f59e0b; }
+        .status-indicator.parsing { background: #3b82f6; }
+        .status-indicator.yielding { background: #10b981; }
+        .status-indicator.done { background: #ef4444; }
+
+        /* Log */
+        .log-section {
+            padding: 0 20px 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .log-panel {
+            background: #111827;
+            border: 1px solid #1e293b;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .log-header {
+            padding: 10px 16px;
+            border-bottom: 1px solid #1e293b;
+            font-size: 12px;
+            font-weight: 600;
+            color: #64748b;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .log-body {
+            padding: 12px 16px;
+            max-height: 180px;
+            overflow-y: auto;
+            font-size: 12px;
+            line-height: 1.8;
+        }
+
+        .log-entry {
+            opacity: 0;
+            display: flex;
+            gap: 10px;
+        }
+
+        .log-step {
+            color: #475569;
+            flex-shrink: 0;
+            min-width: 28px;
+            text-align: right;
+        }
+
+        .log-icon {
+            flex-shrink: 0;
+        }
+
+        .log-msg { color: #94a3b8; }
+        .log-msg code {
+            background: #1e293b;
+            padding: 1px 5px;
+            border-radius: 3px;
+            font-size: 11px;
+        }
+        .log-msg .hl-read { color: #fbbf24; }
+        .log-msg .hl-parse { color: #60a5fa; }
+        .log-msg .hl-yield { color: #34d399; }
+        .log-msg .hl-done { color: #f87171; }
+        .log-msg .hl-boundary { color: #f87171; }
+
+        /* Flying chunk animation helper */
+        .flying-chunk {
+            position: fixed;
+            background: #f59e0b20;
+            border: 1px solid #f59e0b60;
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-size: 11px;
+            color: #fbbf24;
+            pointer-events: none;
+            z-index: 100;
+            white-space: pre;
+            word-break: break-all;
+            max-width: 300px;
+            font-family: inherit;
+        }
+
+        .flying-event {
+            position: fixed;
+            background: #8b5cf620;
+            border: 1px solid #8b5cf660;
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-size: 11px;
+            color: #c4b5fd;
+            pointer-events: none;
+            z-index: 100;
+            white-space: pre;
+            word-break: break-all;
+            max-width: 280px;
+            font-family: inherit;
+        }
+
+        .flying-frame {
+            position: fixed;
+            background: #10b98120;
+            border: 1px solid #10b98160;
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-size: 11px;
+            color: #6ee7b7;
+            pointer-events: none;
+            z-index: 100;
+            white-space: pre;
+            max-width: 280px;
+            font-family: inherit;
+        }
+
+        .done-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: #0a0e17e0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .done-overlay.show {
+            pointer-events: auto;
+        }
+
+        .done-card {
+            background: #111827;
+            border: 1px solid #ef4444;
+            border-radius: 16px;
+            padding: 40px 60px;
+            text-align: center;
+            transform: scale(0.8);
+        }
+
+        .done-card h2 {
+            font-size: 28px;
+            color: #ef4444;
+            margin-bottom: 8px;
+        }
+
+        .done-card p {
+            color: #94a3b8;
+            font-size: 14px;
+        }
+
+        .speed-control {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: #64748b;
+        }
+
+        .speed-control input[type="range"] {
+            width: 80px;
+            accent-color: #3b82f6;
+        }
+
+        /* scrollbar */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>SSE Parser 数据流可视化</h1>
+    <p>手动单步执行 · 观察 buffer 累积 → 边界查找 → 事件切分 → yield 全过程</p>
+</div>
+
+<div class="pipeline-section">
+    <div class="pipeline">
+        <div class="pipe-stage" id="stage-read">
+            <span class="stage-icon">📡</span>
+            <span>await read()</span>
+        </div>
+        <span class="pipe-arrow" id="arrow-1">→</span>
+        <div class="pipe-stage" id="stage-decode">
+            <span class="stage-icon">🔤</span>
+            <span>decode + buffer</span>
+        </div>
+        <span class="pipe-arrow" id="arrow-2">→</span>
+        <div class="pipe-stage" id="stage-boundary">
+            <span class="stage-icon">🔍</span>
+            <span>findBoundary</span>
+        </div>
+        <span class="pipe-arrow" id="arrow-3">→</span>
+        <div class="pipe-stage" id="stage-slice">
+            <span class="stage-icon">✂️</span>
+            <span>slice 切分</span>
+        </div>
+        <span class="pipe-arrow" id="arrow-4">→</span>
+        <div class="pipe-stage" id="stage-parse">
+            <span class="stage-icon">📋</span>
+            <span>parseSingleEvent</span>
+        </div>
+        <span class="pipe-arrow" id="arrow-5">→</span>
+        <div class="pipe-stage" id="stage-yield">
+            <span class="stage-icon">📤</span>
+            <span>yield frame</span>
+        </div>
+    </div>
+</div>
+
+<div class="main-container">
+    <!-- Network -->
+    <div class="panel network-panel">
+        <div class="panel-header">
+            <span class="dot"></span>
+            TCP Chunks（网络层）
+        </div>
+        <div class="panel-body" id="network-body"></div>
+    </div>
+
+    <!-- Buffer -->
+    <div class="panel buffer-panel">
+        <div class="panel-header">
+            <span class="dot"></span>
+            Buffer（行缓冲区）
+            <span id="buffer-size" style="margin-left:auto;color:#475569;font-weight:400;font-size:11px;">0 chars</span>
+        </div>
+        <div class="panel-body">
+            <div class="buffer-display" id="buffer-display">
+                <span class="buffer-empty">等待数据流入...</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Raw Event -->
+    <div class="panel raw-event-panel">
+        <div class="panel-header">
+            <span class="dot"></span>
+            rawEvent（切出的事件）
+        </div>
+        <div class="panel-body">
+            <div class="raw-event-display" id="raw-event-display">
+                <span class="buffer-empty">等待切分...</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Output -->
+    <div class="panel output-panel">
+        <div class="panel-header">
+            <span class="dot"></span>
+            yield SSEFrame
+            <span id="frame-count" style="margin-left:auto;color:#475569;font-weight:400;font-size:11px;">0 frames</span>
+        </div>
+        <div class="panel-body" id="output-body"></div>
+    </div>
+</div>
+
+<!-- Controls -->
+<div class="controls-section">
+    <div class="controls-bar">
+        <button class="btn btn-next" id="btn-next" onclick="executeNextStep()">
+            <span>▶</span> 下一步
+        </button>
+        <button class="btn btn-auto" id="btn-auto" onclick="toggleAutoPlay()">
+            <span>⏩</span> 自动播放
+        </button>
+        <div class="speed-control">
+            <span>速度</span>
+            <input type="range" id="speed-slider" min="1" max="10" value="5">
+            <span id="speed-label">5</span>
+        </div>
+        <button class="btn btn-reset" onclick="resetAll()">
+            <span>↺</span> 重置
+        </button>
+        <div class="status-text">
+            <span class="status-indicator" id="status-dot"></span>
+            <span id="status-label">就绪</span>
+        </div>
+    </div>
+</div>
+
+<!-- Log -->
+<div class="log-section">
+    <div class="log-panel">
+        <div class="log-header">
+            <span>📜</span> 执行日志
+        </div>
+        <div class="log-body" id="log-body"></div>
+    </div>
+</div>
+
+<!-- Done Overlay -->
+<div class="done-overlay" id="done-overlay">
+    <div class="done-card" id="done-card">
+        <h2>🛑 [DONE]</h2>
+        <p>收到终止标记，生成器 return，流解析结束</p>
+    </div>
+</div>
+
+<script>
+// ============================================================
+// 模拟数据：3个 TCP chunk，故意制造拆包
+// ============================================================
+const CHUNKS = [
+    'event: delta\nid: 1\nretry: 3000\ndata: {"msg":"你',
+    '好"}\n\nevent: delta\nid: 2\nda',
+    'ta: {"msg":"世界"}\n\ndata: [DONE]\n\n'
+];
+
+// ============================================================
+// 状态
+// ============================================================
+let buffer = '';
+let chunkIndex = 0;
+let stepCount = 0;
+let frameCount = 0;
+let autoTimer = null;
+let isAnimating = false;
+let isDone = false;
+
+// 当前所处的阶段
+// 'need-read' | 'need-find-boundary' | 'found-boundary' | 'need-slice' | 'need-parse' | 'need-yield' | 'done'
+let phase = 'need-read';
+
+let currentBoundary = null; // { index, length }
+let currentRawEvent = '';
+let currentFrame = null;
+
+// ============================================================
+// 工具函数
+// ============================================================
+function escapeHtml(str) {
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function visualizeWhitespace(str) {
+    return str
+        .replace(/\n/g, '<span style="color:#ef4444;opacity:0.7">⏎\\n</span>')
+        .replace(/\r/g, '<span style="color:#ef4444;opacity:0.5">\\r</span>')
+        .replace(/ /g, '<span style="color:#374151">·</span>');
+}
+
+function visualizeWhitespaceRaw(str) {
+    return str.replace(/\n/g, '\\n').replace(/\r/g, '\\r');
+}
+
+function getSpeedMs() {
+    const val = document.getElementById('speed-slider').value;
+    document.getElementById('speed-label').textContent = val;
+    return (11 - val) * 150; // 1=slow(1500ms), 10=fast(150ms)
+}
+
+// ============================================================
+// 渲染函数
+// ============================================================
+function renderChunks() {
+    const body = document.getElementById('network-body');
+    body.innerHTML = '';
+    CHUNKS.forEach((c, i) => {
+        const div = document.createElement('div');
+        div.className = 'chunk-item' + (i < chunkIndex ? ' sent' : '');
+        div.id = 'chunk-' + i;
+        div.innerHTML = `
+            <div class="chunk-label">Chunk ${i + 1} (${c.length} bytes)</div>
+            <div class="chunk-content">${visualizeWhitespace(escapeHtml(c))}</div>
+        `;
+        body.appendChild(div);
+    });
+}
+
+function renderBuffer(highlightBoundary, highlightEvent) {
+    const display = document.getElementById('buffer-display');
+    const sizeLabel = document.getElementById('buffer-size');
+
+    if (buffer.length === 0) {
+        display.innerHTML = '<span class="buffer-empty">（空）</span>';
+        sizeLabel.textContent = '0 chars';
+        return;
+    }
+
+    sizeLabel.textContent = buffer.length + ' chars';
+
+    let html = '';
+    for (let i = 0; i < buffer.length; i++) {
+        let cls = 'buffer-char';
+        if (highlightBoundary && i >= highlightBoundary.index && i < highlightBoundary.index + highlightBoundary.length) {
+            cls += ' highlight-boundary';
+        }
+        if (highlightEvent && i >= highlightEvent.start && i < highlightEvent.end) {
+            cls += ' highlight-event';
+        }
+
+        const ch = buffer[i];
+        let display_ch;
+        if (ch === '\n') {
+            display_ch = '<span style="color:#ef4444">⏎</span>\n';
+        } else if (ch === '\r') {
+            display_ch = '<span style="color:#ef4444">\\r</span>';
+        } else {
+            display_ch = escapeHtml(ch);
+        }
+        html += `<span class="${cls}">${display_ch}</span>`;
+    }
+
+    display.innerHTML = `<span class="buffer-text">${html}</span>`;
+}
+
+function renderRawEvent(raw) {
+    const display = document.getElementById('raw-event-display');
+    if (!raw) {
+        display.innerHTML = '<span class="buffer-empty">等待切分...</span>';
+        return;
+    }
+
+    const lines = raw.split(/\r?\n/);
+    let html = '';
+    lines.forEach(line => {
+        let cls = '';
+        if (line.startsWith('data:') || line === 'data') cls = 'field-data';
+        else if (line.startsWith('event:')) cls = 'field-event';
+        else if (line.startsWith('id:')) cls = 'field-id';
+        else if (line.startsWith('retry:')) cls = 'field-retry';
+        else if (line.startsWith(':')) cls = 'field-comment';
+
+        html += `<span class="raw-line ${cls}">${visualizeWhitespace(escapeHtml(line))}</span>`;
+    });
+
+    display.innerHTML = html;
+}
+
+function renderFrame(frame) {
+    const body = document.getElementById('output-body');
+    const div = document.createElement('div');
+    div.className = 'frame-item';
+    div.id = 'frame-' + frameCount;
+
+    let fieldsHtml = '';
+    if (frame.event) {
+        fieldsHtml += `<div class="frame-field"><span class="field-name">event:</span><span class="field-value val-event">${escapeHtml(frame.event)}</span></div>`;
+    }
+    if (frame.id) {
+        fieldsHtml += `<div class="frame-field"><span class="field-name">id:</span><span class="field-value val-id">${escapeHtml(frame.id)}</span></div>`;
+    }
+    if (frame.retry !== undefined) {
+        fieldsHtml += `<div class="frame-field"><span class="field-name">retry:</span><span class="field-value">${frame.retry}</span></div>`;
+    }
+    fieldsHtml += `<div class="frame-field"><span class="field-name">data:</span><span class="field-value val-data">${escapeHtml(frame.data)}</span></div>`;
+
+    div.innerHTML = `<div class="frame-label">SSEFrame #${frameCount}</div>${fieldsHtml}`;
+    body.appendChild(div);
+
+    document.getElementById('frame-count').textContent = frameCount + ' frames';
+}
+
+// ============================================================
+// Pipeline stage highlighting
+// ============================================================
+function setActiveStage(stageId) {
+    document.querySelectorAll('.pipe-stage').forEach(el => {
+        el.classList.remove('active', 'completed');
+    });
+    document.querySelectorAll('.pipe-arrow').forEach(el => {
+        el.classList.remove('active');
+    });
+    if (stageId) {
+        document.getElementById(stageId).classList.add('active');
+    }
+}
+
+function setStatus(text, statusClass) {
+    document.getElementById('status-label').textContent = text;
+    const dot = document.getElementById('status-dot');
+    dot.className = 'status-indicator ' + (statusClass || '');
+}
+
+// ============================================================
+// Logging
+// ============================================================
+function addLog(icon, msg) {
+    stepCount++;
+    const body = document.getElementById('log-body');
+    const entry = document.createElement('div');
+    entry.className = 'log-entry';
+    entry.innerHTML = `<span class="log-step">${stepCount}.</span><span class="log-icon">${icon}</span><span class="log-msg">${msg}</span>`;
+    body.appendChild(entry);
+
+    gsap.fromTo(entry, { opacity: 0, x: -10 }, { opacity: 1, x: 0, duration: 0.3 });
+    body.scrollTop = body.scrollHeight;
+}
+
+// ============================================================
+// SSE 解析辅助（与源码一致）
+// ============================================================
+function findEventBoundary(input) {
+    const n2 = input.indexOf('\n\n');
+    const rn2 = input.indexOf('\r\n\r\n');
+    if (n2 === -1 && rn2 === -1) return { index: -1, length: 0 };
+    if (n2 === -1) return { index: rn2, length: 4 };
+    if (rn2 === -1) return { index: n2, length: 2 };
+    return n2 < rn2 ? { index: n2, length: 2 } : { index: rn2, length: 4 };
+}
+
+function parseSingleEvent(rawEvent) {
+    const lines = rawEvent.split(/\r?\n/);
+    let event, id, retry;
+    const dataLines = [];
+
+    for (const line of lines) {
+        if (!line) continue;
+        if (line.startsWith(':')) continue;
+        const colon = line.indexOf(':');
+        let field, value;
+        if (colon === -1) { field = line; value = ''; }
+        else {
+            field = line.slice(0, colon);
+            value = line.slice(colon + 1);
+            if (value.startsWith(' ')) value = value.slice(1);
+        }
+        if (field === 'data') { dataLines.push(value); continue; }
+        if (field === 'event') { event = value; continue; }
+        if (field === 'id') { id = value; continue; }
+        if (field === 'retry') {
+            const n = Number(value);
+            if (Number.isFinite(n) && n >= 0) retry = n;
+        }
+    }
+
+    if (dataLines.length === 0) return null;
+    return { event, id, retry, data: dataLines.join('\n'), raw: rawEvent };
+}
+
+// ============================================================
+// 步骤执行
+// ============================================================
+async function executeNextStep() {
+    if (isAnimating || isDone) return;
+    isAnimating = true;
+    const btn = document.getElementById('btn-next');
+    btn.disabled = true;
+
+    await executePhase();
+
+    btn.disabled = isDone;
+    isAnimating = false;
+}
+
+async function executePhase() {
+    switch (phase) {
+        case 'need-read':
+            await stepRead();
+            break;
+        case 'need-find-boundary':
+            await stepFindBoundary();
+            break;
+        case 'need-slice':
+            await stepSlice();
+            break;
+        case 'need-parse':
+            await stepParse();
+            break;
+        case 'need-yield':
+            await stepYield();
+            break;
+        case 'done':
+            break;
+    }
+}
+
+// -- Step: Read chunk --
+async function stepRead() {
+    if (chunkIndex >= CHUNKS.length) {
+        addLog('🏁', '<span class="hl-done">流结束（done=true），退出外层循环</span>');
+        setStatus('流结束', 'done');
+        setActiveStage(null);
+        isDone = true;
+        phase = 'done';
+        return;
+    }
+
+    setActiveStage('stage-read');
+    setStatus('读取 Chunk ' + (chunkIndex + 1), 'reading');
+
+    const chunk = CHUNKS[chunkIndex];
+    const chunkEl = document.getElementById('chunk-' + chunkIndex);
+
+    addLog('📡', `<span class="hl-read">await reader.read()</span> → 收到 <code>Chunk ${chunkIndex + 1}</code>（${chunk.length} bytes）`);
+
+    // 动画：chunk 飞入 buffer
+    await new Promise(resolve => {
+        const bufferEl = document.getElementById('buffer-display');
+        const srcRect = chunkEl.getBoundingClientRect();
+        const dstRect = bufferEl.getBoundingClientRect();
+
+        const flyer = document.createElement('div');
+        flyer.className = 'flying-chunk';
+        flyer.textContent = visualizeWhitespaceRaw(chunk).slice(0, 60) + (chunk.length > 60 ? '...' : '');
+        document.body.appendChild(flyer);
+
+        gsap.set(flyer, { x: srcRect.left, y: srcRect.top, width: srcRect.width });
+
+        const tl = gsap.timeline({
+            onComplete: () => {
+                flyer.remove();
+                resolve();
+            }
+        });
+
+        tl.to(flyer, {
+            x: dstRect.left + 10,
+            y: dstRect.top + 10,
+            width: dstRect.width - 20,
+            duration: 0.6,
+            ease: 'power2.inOut'
+        })
+        .to(flyer, { opacity: 0, scale: 0.95, duration: 0.2 });
+    });
+
+    // 更新状态
+    chunkEl.classList.add('sent');
+
+    // decode + 追加到 buffer
+    setActiveStage('stage-decode');
+    addLog('🔤', `<span class="hl-parse">decoder.decode()</span> → 追加到 buffer`);
+
+    buffer += chunk;
+    chunkIndex++;
+
+    // 渲染 buffer
+    renderBuffer();
+
+    await gsap.to({}, { duration: 0.3 }).then();
+
+    // 进入内层循环
+    phase = 'need-find-boundary';
+    addLog('🔄', '进入<span class="hl-parse">内层 while 循环</span>');
+}
+
+// -- Step: Find boundary --
+async function stepFindBoundary() {
+    setActiveStage('stage-boundary');
+    setStatus('查找事件边界', 'parsing');
+
+    const boundary = findEventBoundary(buffer);
+
+    if (boundary.index < 0) {
+        addLog('🔍', `<span class="hl-boundary">findEventBoundary()</span> → <code>index = -1</code>，无完整事件`);
+        addLog('⬆️', '<span class="hl-parse">break</span> 内层循环 → 回到外层 <span class="hl-read">await read()</span>');
+
+        renderBuffer();
+        setActiveStage(null);
+        phase = 'need-read';
+
+        await gsap.to({}, { duration: 0.3 }).then();
+        return;
+    }
+
+    currentBoundary = boundary;
+
+    const sepStr = buffer.slice(boundary.index, boundary.index + boundary.length);
+    const sepDisplay = visualizeWhitespaceRaw(sepStr);
+
+    addLog('🔍', `<span class="hl-boundary">findEventBoundary()</span> → 找到 <code>${sepDisplay}</code> 在 index=${boundary.index}，length=${boundary.length}`);
+
+    // 高亮 boundary
+    renderBuffer(boundary);
+
+    await gsap.to({}, { duration: 0.5 }).then();
+
+    // 同时高亮事件部分
+    renderBuffer(boundary, { start: 0, end: boundary.index });
+
+    await gsap.to({}, { duration: 0.4 }).then();
+
+    phase = 'need-slice';
+}
+
+// -- Step: Slice --
+async function stepSlice() {
+    setActiveStage('stage-slice');
+    setStatus('切分事件', 'parsing');
+
+    const rawEvent = buffer.slice(0, currentBoundary.index);
+    const remaining = buffer.slice(currentBoundary.index + currentBoundary.length);
+
+    addLog('✂️', `<span class="hl-parse">buffer.slice(0, ${currentBoundary.index})</span> → rawEvent（${rawEvent.length} chars）`);
+    addLog('✂️', `<span class="hl-parse">buffer = buffer.slice(${currentBoundary.index + currentBoundary.length})</span> → 剩余 ${remaining.length} chars`);
+
+    currentRawEvent = rawEvent;
+
+    // 动画：事件块飞到 rawEvent 面板
+    await new Promise(resolve => {
+        const bufferEl = document.getElementById('buffer-display');
+        const rawEl = document.getElementById('raw-event-display');
+        const srcRect = bufferEl.getBoundingClientRect();
+        const dstRect = rawEl.getBoundingClientRect();
+
+        const flyer = document.createElement('div');
+        flyer.className = 'flying-event';
+        flyer.textContent = visualizeWhitespaceRaw(rawEvent).slice(0, 80) + (rawEvent.length > 80 ? '...' : '');
+        document.body.appendChild(flyer);
+
+        gsap.set(flyer, { x: srcRect.left, y: srcRect.top, width: Math.min(srcRect.width, 300) });
+
+        const tl = gsap.timeline({
+            onComplete: () => {
+                flyer.remove();
+                resolve();
+            }
+        });
+
+        tl.to(flyer, {
+            x: dstRect.left + 5,
+            y: dstRect.top + 5,
+            width: dstRect.width - 10,
+            duration: 0.5,
+            ease: 'power2.inOut'
+        })
+        .to(flyer, { opacity: 0, duration: 0.15 });
+    });
+
+    // 更新 buffer
+    buffer = remaining;
+    renderBuffer();
+    renderRawEvent(rawEvent);
+
+    currentBoundary = null;
+    phase = 'need-parse';
+}
+
+// -- Step: Parse --
+async function stepParse() {
+    setActiveStage('stage-parse');
+    setStatus('解析事件字段', 'parsing');
+
+    const frame = parseSingleEvent(currentRawEvent);
+
+    if (!frame) {
+        addLog('📋', '<span class="hl-parse">parseSingleEvent()</span> → 无 data 行，跳过');
+        renderRawEvent(null);
+        phase = 'need-find-boundary';
+        return;
+    }
+
+    currentFrame = frame;
+
+    // 检查 [DONE]
+    if (frame.data === '[DONE]') {
+        addLog('📋', `<span class="hl-parse">parseSingleEvent()</span> → data = <code>[DONE]</code>`);
+        addLog('🛑', '<span class="hl-done">data === DONE_SENTINEL → return，生成器终止！</span>');
+
+        setStatus('[DONE] 终止', 'done');
+        isDone = true;
+        phase = 'done';
+
+        // 显示 DONE overlay
+        const overlay = document.getElementById('done-overlay');
+        overlay.classList.add('show');
+        gsap.to(overlay, { opacity: 1, duration: 0.4 });
+        gsap.fromTo('#done-card', { scale: 0.8, y: 30 }, { scale: 1, y: 0, duration: 0.5, ease: 'back.out(1.7)' });
+
+        return;
+    }
+
+    let fieldDesc = [];
+    if (frame.event) fieldDesc.push(`event="${frame.event}"`);
+    if (frame.id) fieldDesc.push(`id="${frame.id}"`);
+    if (frame.retry !== undefined) fieldDesc.push(`retry=${frame.retry}`);
+    fieldDesc.push(`data="${frame.data.slice(0, 40)}${frame.data.length > 40 ? '...' : ''}"`);
+
+    addLog('📋', `<span class="hl-parse">parseSingleEvent()</span> → { ${fieldDesc.join(', ')} }`);
+
+    // 行逐步高亮效果
+    const rawLines = document.querySelectorAll('#raw-event-display .raw-line');
+    for (let i = 0; i < rawLines.length; i++) {
+        gsap.fromTo(rawLines[i],
+            { backgroundColor: 'rgba(139,92,246,0)' },
+            { backgroundColor: 'rgba(139,92,246,0.15)', duration: 0.15, yoyo: true, repeat: 1 }
+        );
+        await gsap.to({}, { duration: 0.1 }).then();
+    }
+
+    phase = 'need-yield';
+}
+
+// -- Step: Yield --
+async function stepYield() {
+    setActiveStage('stage-yield');
+    setStatus('yield frame', 'yielding');
+
+    frameCount++;
+    renderFrame(currentFrame);
+
+    addLog('📤', `<span class="hl-yield">yield</span> SSEFrame #${frameCount}`);
+
+    // 动画：frame 飞入输出面板
+    const frameEl = document.getElementById('frame-' + frameCount);
+
+    await new Promise(resolve => {
+        const rawEl = document.getElementById('raw-event-display');
+        const srcRect = rawEl.getBoundingClientRect();
+
+        gsap.fromTo(frameEl,
+            { opacity: 0, x: -30, scale: 0.9 },
+            { opacity: 1, x: 0, scale: 1, duration: 0.5, ease: 'back.out(1.7)', onComplete: resolve }
+        );
+    });
+
+    // 清空 rawEvent 面板
+    renderRawEvent(null);
+    currentRawEvent = '';
+    currentFrame = null;
+
+    // 继续内层循环
+    addLog('🔄', '内层循环继续 → 再次 <span class="hl-boundary">findBoundary</span>');
+    phase = 'need-find-boundary';
+}
+
+// ============================================================
+// Auto play
+// ============================================================
+function toggleAutoPlay() {
+    const btn = document.getElementById('btn-auto');
+    if (autoTimer) {
+        clearInterval(autoTimer);
+        autoTimer = null;
+        btn.classList.remove('running');
+        btn.innerHTML = '<span>⏩</span> 自动播放';
+    } else {
+        btn.classList.add('running');
+        btn.innerHTML = '<span>⏹</span> 停止';
+        runAuto();
+    }
+}
+
+function runAuto() {
+    if (isDone || !autoTimer) {
+        if (autoTimer) {
+            clearInterval(autoTimer);
+            autoTimer = null;
+            const btn = document.getElementById('btn-auto');
+            btn.classList.remove('running');
+            btn.innerHTML = '<span>⏩</span> 自动播放';
+        }
+        return;
+    }
+    executeNextStep().then(() => {
+        if (!isDone) {
+            autoTimer = setTimeout(runAuto, getSpeedMs());
+        } else {
+            const btn = document.getElementById('btn-auto');
+            btn.classList.remove('running');
+            btn.innerHTML = '<span>⏩</span> 自动播放';
+            autoTimer = null;
+        }
+    });
+}
+
+// Kick off auto with a dummy timer
+const origToggle = toggleAutoPlay;
+toggleAutoPlay = function() {
+    const btn = document.getElementById('btn-auto');
+    if (autoTimer) {
+        clearTimeout(autoTimer);
+        autoTimer = null;
+        btn.classList.remove('running');
+        btn.innerHTML = '<span>⏩</span> 自动播放';
+    } else {
+        btn.classList.add('running');
+        btn.innerHTML = '<span>⏹</span> 停止';
+        autoTimer = setTimeout(runAuto, 100);  // small initial delay
+    }
+};
+
+// ============================================================
+// Reset
+// ============================================================
+function resetAll() {
+    if (autoTimer) {
+        clearTimeout(autoTimer);
+        autoTimer = null;
+    }
+
+    buffer = '';
+    chunkIndex = 0;
+    stepCount = 0;
+    frameCount = 0;
+    isAnimating = false;
+    isDone = false;
+    phase = 'need-read';
+    currentBoundary = null;
+    currentRawEvent = '';
+    currentFrame = null;
+
+    renderChunks();
+    renderBuffer();
+    renderRawEvent(null);
+    document.getElementById('output-body').innerHTML = '';
+    document.getElementById('log-body').innerHTML = '';
+    document.getElementById('frame-count').textContent = '0 frames';
+    document.getElementById('buffer-size').textContent = '0 chars';
+
+    setActiveStage(null);
+    setStatus('就绪', '');
+
+    document.getElementById('buffer-display').innerHTML = '<span class="buffer-empty">等待数据流入...</span>';
+
+    const overlay = document.getElementById('done-overlay');
+    overlay.classList.remove('show');
+    gsap.set(overlay, { opacity: 0 });
+
+    const btn = document.getElementById('btn-next');
+    btn.disabled = false;
+
+    const autoBtn = document.getElementById('btn-auto');
+    autoBtn.classList.remove('running');
+    autoBtn.innerHTML = '<span>⏩</span> 自动播放';
+}
+
+// ============================================================
+// Init
+// ============================================================
+renderChunks();
+
+// Speed slider
+document.getElementById('speed-slider').addEventListener('input', function() {
+    document.getElementById('speed-label').textContent = this.value;
+});
+
+// Keyboard shortcut
+document.addEventListener('keydown', function(e) {
+    if (e.code === 'Space' || e.code === 'ArrowRight') {
+        e.preventDefault();
+        executeNextStep();
+    }
+    if (e.code === 'KeyR' && !e.metaKey && !e.ctrlKey) {
+        resetAll();
+    }
+});
+</script>
+
+</body>
+</html>

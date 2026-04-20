@@ -15,13 +15,13 @@ export interface Message {
     role: Role;
     content: MessageContent[];
     timestamp: number;
-    deepThinking: boolean;
     conversationId: string;
 }
 
 export type MessageContent =
     | TextContent
     | ImageContent
+    | ThinkingContent
     | ToolCallContent
     | ToolResultContent;
 
@@ -35,6 +35,12 @@ export type ImageContent = {
     // Base64 string or URL
     data: string;
 }
+
+export type ThinkingContent = {
+    type: 'thinking',
+    text: string,
+}
+
 export type ToolCallContent = {
     type: 'tool_call';
     toolName: string;
