@@ -1,6 +1,8 @@
 import { app, BrowserWindow } from 'electron';
 import path from 'path';
+import { registerLlmHandlers } from './ipc/llmHandlers';
 
+let mainWindow: BrowserWindow | null = null;
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) {
   app.quit();
@@ -8,14 +10,14 @@ if (require('electron-squirrel-startup')) {
 
 const createWindow = () => {
   // Create the browser window.
-  const mainWindow = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
     },
   });
-
+  registerLlmHandlers(mainWindow)
   // and load the index.html of the app.
   if (process.env.VITE_DEV_SERVER_URL) {
     mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL);
@@ -50,3 +52,6 @@ app.on('activate', () => {
 
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and import them here.
+
+
+

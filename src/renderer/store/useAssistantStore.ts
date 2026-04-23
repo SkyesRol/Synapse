@@ -22,9 +22,9 @@ interface AssistantState {
 }
 
 const DEFAULT_MODEL_CONFIG: ModelConfig = {
-    modelId: 'Pro/moonshotai/Kimi-K2.5',
-    modelName: 'Kimi-K2.5',
-    temperature: 0.5,
+    modelId: 'MiniMax-M2.7',
+    modelName: 'MiniMax-M2.7',
+    temperature: 0.7,
     maxTokens: 4096,
     topP: 1,
     stream: true
