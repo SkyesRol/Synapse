@@ -10,6 +10,7 @@ export interface ModelConfig {
     maxTokens: number;
     // 对应 top_p (0-1)。
     topP: number;
+
     stream: boolean;
 }
 // ------------------------------------------------------------------------------------

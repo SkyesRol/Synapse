@@ -138,32 +138,59 @@ Step 5 → 回到主线继续对话，主线模型已知晓子分支的结论
 
 ```
 src/
+├── electron.d.ts           # Window 全局类型扩展（electronAPI）
+├── routes.tsx              # 路由配置
 ├── main/                   # Electron Main Process
-│   ├── main.ts
-│   └── preload.ts
+│   ├── main.ts             # 入口：生命周期 + 窗口 + 注册
+│   ├── preload.ts          # contextBridge 暴露 electronAPI
+│   ├── ipc/                # IPC Handler 模块
+│   │   ├── llmHandlers.ts  # send-message / abort-stream
+│   │   └── windowHandlers.ts
+│   └── llm/                # LLM 调用链路（Main Process 侧）
+│       ├── client.ts       # 流式管道总装层，fetch + 错误归一化
+│       ├── sseParser.ts    # 通用 SSE 协议解析
+│       └── providers/
+│           └── minimaxAdapter.ts  # MiniMax 厂商 adapter
 ├── renderer/               # React Renderer Process
-│   ├── components/         # Shared Components
-│   │   ├── Sidebar/
-│   │   ├── MessageBubble/
-│   │   ├── BranchCard/     # 分支摘要卡片组件
-│   │   └── ...
-│   ├── pages/              # Page Views
-│   │   ├── Conversation/   # 主对话 & 分支对话视图
-│   │   ├── Market/
-│   │   └── Settings/
-│   ├── services/           # 业务逻辑层
-│   │   ├── llm/            # LLM API 调用、流式处理
-│   │   ├── context/        # 上下文组装、路径提取、摘要生成
-│   │   └── db/             # IndexedDB 数据访问层 (idb)
-│   ├── stores/             # 状态管理
-│   ├── styles/             # Global Styles & Theme
-│   │   ├── GlobalStyle.ts
-│   │   └── theme.ts
-│   ├── types/              # TypeScript 类型定义
 │   ├── App.tsx
-│   └── index.tsx
-├── shared/                 # Shared Types/Utils (Main & Renderer)
-└── assets/                 # Static Assets (Fonts, Images)
+│   ├── index.tsx
+│   ├── components/         # 共享 UI 组件
+│   │   ├── Sidebar/        # 侧边栏（NavItem, AssistantItem 等）
+│   │   ├── Conversations/  # 历史记录（HistoryItem, HistoryMenu, Navbar）
+│   │   ├── Modals/         # 弹窗（CreateAssistant, AssistantSettings, Global）
+│   │   ├── SearchBar.tsx
+│   │   ├── SliderTrack.tsx
+│   │   ├── StreamResponse.tsx
+│   │   └── Switch.tsx
+│   ├── hooks/
+│   │   ├── useChat.ts      # 流式对话核心 Hook（发送 + 接收 + finalize）
+│   │   └── useClickOutside.ts
+│   ├── lib/
+│   │   └── db.ts           # IndexedDB schema（idb）
+│   ├── pages/
+│   │   ├── Chat/           # 主对话页
+│   │   ├── Conversation/   # 对话视图（含分支，V1+）
+│   │   ├── Market/         # MCP Market（V2）
+│   │   └── Settings/       # 设置页（Provider 配置等）
+│   ├── services/           # 业务数据访问层
+│   │   ├── assistantService.ts
+│   │   └── conversationService.ts
+│   ├── store/              # Zustand 状态管理
+│   │   ├── useAssistantStore.ts
+│   │   └── useConversationStore.ts
+│   ├── styles/
+│   │   └── GlobalStyle.ts
+│   └── types/              # Renderer 侧 TypeScript 类型
+│       ├── assistant.ts
+│       ├── conversation.ts
+│       ├── models.ts       # ModelConfig（模型采样参数）
+│       └── providers.ts    # ProviderConfig / LLMProvider / LLMModel
+├── shared/                 # Main + Renderer 共享类型与工具
+│   ├── streamEvents.ts     # 流式事件协议（StreamEvent 判别联合）
+│   ├── types.ts            # CallConfig / ModelMessage / ModelMessages
+│   └── utils.ts
+└── assets/                 # 静态资源
+    └── AssistantAvatar.tsx
 ```
 
 ---

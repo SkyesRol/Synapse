@@ -1,28 +1,12 @@
 import { StreamEvent } from "@/shared/streamEvents";
+import { CallConfig, ModelMessages } from "@/shared/types";
 import { parseSSEEvents } from "./sseParser";
 import { minimaxAdapter } from "./providers/minimaxAdapter";
 
 
 
-export interface ModelMessage {
-    role: 'user' | 'assistant' | 'tool',     // 不清楚这个 client 是每个厂家都能用还是只针对于 OpenAI Compatible 的格式，暂时写为 string，如果是 OpenAI兼容格式，则角色只有 'user','assistant','tool'
-    content: string,
-}
-export type ModelMessages = ModelMessage[];
-export interface ModelConfig {
-    modelId: string,
-    temperature: number,
-    maxTokens: number,
-    topP: number,
-    stream: boolean,
-    apiKey: string,
-    baseUrl: string
-}
-
-
-
 export async function* fetchCompletions(
-    messages: ModelMessages, config: ModelConfig, signal: AbortSignal
+    messages: ModelMessages, config: CallConfig, signal: AbortSignal
 ): AsyncGenerator<StreamEvent> {
     try {
         const payload = {
@@ -31,7 +15,7 @@ export async function* fetchCompletions(
             temperature: config.temperature,
             max_tokens: config.maxTokens,
             top_p: config.topP,
-            stream: config.stream,
+            stream: true,
             reasoning_split: true,
         }
         const streamResponse = await fetch(config.baseUrl, {

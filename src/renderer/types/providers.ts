@@ -1,7 +1,7 @@
 
 
 export interface ProviderConfig {
-    apiBaseURL: string;
+    baseUrl: string;
     apiKey: string;
 }
 

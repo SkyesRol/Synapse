@@ -41,27 +41,57 @@
   - client.ts 作为错误归一化总枢纽，IPC Handler 无需处理任何异常
   - V1 不引入 queryLoop/queryEngine——Renderer Store 直接消费 StreamEvent
 
-### 后续步骤（client.ts 之后）
+### 阶段 D：IPC 桥接层（Day 15 已完成）
 
-## ⏭️ 下一步：Step 4 — IPC 桥接
+- **`src/main/preload.ts`** ✅ — Preload 层，通过 `contextBridge.exposeInMainWorld('electronAPI', ...)` 暴露三个 API：
+  - `sendMessage(modelConfig, messages, conversationId?)` → `ipcRenderer.send('send-message', ...)`
+  - `onStreamEvent(callback)` → `ipcRenderer.on` + 返回清理函数（防内存泄漏）
+  - `abortStream()` → `ipcRenderer.send('abort-stream')`
+  - listener 适配层：中间函数处理 `(IpcRendererEvent, data)` → `callback(data)` 参数位移
+- **`src/main/ipc/llmHandlers.ts`** ✅ — LLM IPC handler 模块
+  - `registerLlmHandlers(mainWindow)` 聚合注册两个 handler
+  - 模块级 `currentController: AbortController | null` 被两个 handler 共享
+  - `send-message` handler：abort 旧请求 → 创建新 controller → `fetchCompletions` → `for await` 逐帧 `webContents.send`，推送前 `isDestroyed()` 守卫
+  - `abort-stream` handler：接收 `conversationId`（V1 暂不用），直接调 `currentController?.abort()`
+- **`src/main/main.ts`** ✅ — 精简为入口层
+  - `mainWindow` 提升为模块级变量（`let mainWindow: BrowserWindow | null`）
+  - `createWindow()` 内调用 `registerLlmHandlers(mainWindow)` 完成注册
+  - 无业务逻辑，只做生命周期 + 窗口 + 注册入口
+- **架构决策**：
+  - V1 单 `AbortController`，UI 层禁用输入阻断并发，够用
+  - args 携带 `conversationId` 预留升级空间，未来换 `Map<conversationId, AbortController>` 只改 handler 内部
+  - `client.ts` 保证 generator 永远正常结束，handler 层无需 try/catch
 
-#### Step 4：IPC 桥接
-- Main Process 侧注册 IPC handler，调 fetchCompletions，逐个 StreamEvent 推送回 Renderer
-- Preload 暴露 `sendMessage` / `onStreamEvent` / `abortStream`
+### 阶段 E：Renderer Store 流式集成（Day 16 已完成）
 
-#### Step 5：Renderer Store
-- `sendMessage` → push 用户消息 → IPC 调 Main
-- `appendStreamEvent` → 累积 `currentThinking` / `currentContent`
-- `finalizeMessage` → DoneEvent 时一次性写入 `messages[]`（含 ThinkingContent + TextContent）
+- **类型重构** ✅
+  - `shared/types.ts` 新增：`CallConfig`（跨层调用参数）、`ModelMessage` / `ModelMessages`（从 client.ts 迁移）
+  - `ModelConfig`（renderer）移除 `stream: boolean`，改由 `CallConfig` 单独携带，V1 默认始终流式
+  - `client.ts` 删除本地类型定义，改从 `@/shared/types` 引入
+  - `llmHandlers.ts` / `preload.ts` 同步更新 import
+- **`src/electron.d.ts`** ✅ — Window 全局类型声明
+  - `declare global { interface Window { electronAPI: {...} } }` + `export {}`
+  - 用内联 `import()` 类型语法避免顶层 import 导致 `.d.ts` 变模块
+- **`src/renderer/hooks/useChat.ts`** ✅ — 流式对话核心 Hook 完成
+  - **发送侧**：Guard 前置检查 `activeAssistant` → 组装 `CallConfig`（modelConfig + env apiKey/baseUrl）→ `flatMap` 转换 `messages` + `newMessage` 为 `ModelMessage[]`（过滤非文本 content）→ 首条插入 system prompt → `window.electronAPI.sendMessage`
+  - **接收侧**：`useEffect(fn, [])` 订阅 `onStreamEvent`，`return unsubscribe` 清理
+  - **闭包修复**：`contentRef` / `thinkingRef` / `conversationIdRef` 三个 `useRef` 解决 `[]` 依赖数组的闭包陷阱
+  - **switch 分发**：thinking → append ref + setState；content → append ref + setState；done → 用 ref 值 finalize Message（ThinkingContent? + TextContent）→ setMessages + addMessage + 重置；error → console.error + 重置
+  - **新对话创建**：`conversationIdRef.current = currentId` 在 navigate 之前同步，保证 done 时 finalize 拿到正确 id
+
+## ⏭️ 下一步：Step 6 — UI 渲染层
 
 #### Step 6：UI 渲染
-- 流式文本输出（直接读 `currentContent`）
-- 思考过程动画（`currentThinking` + streaming-dots）
-- 状态切换：thinking → streaming → idle
+- `UseChatReturn` 接口补充导出 `currentThinking` / `currentContent` / `isStreaming`
+- 流式文本输出（直接读 `currentContent`，字符逐帧出现）
+- 思考过程动画（`currentThinking` 内容 + streaming-dots 动画）
+- 状态切换：idle → thinking → streaming → idle
+- Chat 页面接入 `useChat`，渲染消息列表 + 流式气泡
 
 ---
 
 ## 💾 同步信息
 
-> **当前进度**：sseParser、minimaxAdapter、client.ts 均已完成，流式调用链路（Main Process 侧）全部打通。
-> **下一步入手点**：Step 4 IPC 桥接——Main Process 注册 handler 调用 `fetchCompletions`，逐个 `StreamEvent` 推回 Renderer；Preload 暴露 `sendMessage` / `onStreamEvent` / `abortStream`。
+> **当前进度**：Step 5 Renderer Store 全部完成。`useChat.ts` 发送侧 + 接收侧链路打通，零 TS 报错。
+> **下一步入手点**：Step 6 UI 渲染——在 `useChat` 的 `UseChatReturn` 里导出流式状态，在 Chat 页面渲染消息列表和流式气泡组件。
+> **V1 临时方案**：apiKey / baseUrl 通过 `.env` + `import.meta.env.VITE_*` 读取，Provider 存储页面待后续实现。

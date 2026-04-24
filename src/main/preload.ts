@@ -3,10 +3,9 @@
 // console.log('Preload script loaded');
 import { contextBridge, ipcRenderer, IpcRendererEvent } from "electron";
 import { StreamEvent } from "@/shared/streamEvents";
-import { ModelConfig } from "@/main/llm/client";
-import { ModelMessages } from '@/main/llm/client';
+import { CallConfig, ModelMessages } from "@/shared/types";
 contextBridge.exposeInMainWorld('electronAPI', {
-    sendMessage: (modelConfig: ModelConfig, messages: ModelMessages, conversationId?: string) => {
+    sendMessage: (modelConfig: CallConfig, messages: ModelMessages, conversationId?: string) => {
         ipcRenderer.send('send-message', {
             modelConfig,
             messages,

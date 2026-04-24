@@ -1,5 +1,6 @@
-import { BrowserWindow, ipcMain, IpcMainEvent } from "electron";
-import { fetchCompletions, ModelConfig, ModelMessages } from "../llm/client";
+import { BrowserWindow, ipcMain } from "electron";
+import { CallConfig, ModelMessages } from "@/shared/types";
+import { fetchCompletions } from "../llm/client";
 
 
 
@@ -19,7 +20,7 @@ export function registerLlmHandlers(mainWindow: BrowserWindow) {
 
 
 
-async function handleSendMessage(mainWindow: BrowserWindow, args: { conversationId?: string, messages: ModelMessages, modelConfig: ModelConfig }) {
+async function handleSendMessage(mainWindow: BrowserWindow, args: { conversationId?: string, messages: ModelMessages, modelConfig: CallConfig }) {
     let { messages, modelConfig } = args;
     if (currentController !== null) {
         currentController.abort();
